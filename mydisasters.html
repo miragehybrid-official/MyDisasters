@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MyDisasters</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f4f7;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: auto;
+        }
+
+        h2 {
+            text-align: center;
+        }
+
+        input, select, button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #888;
+        }
+
+        button {
+            background: #3a7afe;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover { background: #2e69d8; }
+
+        .reports {
+            margin-top: 20px;
+        }
+
+        .report-card {
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 20px;
+            color: white;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .report-card.low { background: rgba(66, 165, 245, 0.3); }
+        .report-card.medium { background: rgba(255, 235, 59, 0.3); color: black; }
+        .report-card.high { background: rgba(244, 67, 54, 0.3); }
+
+        .report-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>MyDisasters</h2>
+
+    <!-- Reporter Form -->
+    <input type="text" id="type" placeholder="Disaster Type (Flood)">
+    <input type="text" id="location" placeholder="Location (Ipoh)">
+    <select id="severity">
+        <option value="">Select Severity</option>
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+    </select>
+    <button onclick="submitReport()">Submit Report</button>
+
+    <div class="reports" id="reports"></div>
+</div>
+
+<script>
+let savedReports = JSON.parse(localStorage.getItem('myDisasters')) || [];
+displayReports();
+
+// Submit user report
+function submitReport() {
+    let type = document.getElementById('type').value.trim();
+    let location = document.getElementById('location').value.trim();
+    let severity = document.getElementById('severity').value;
+
+    if (!type || !location || !severity) {
+        alert("Please fill all fields!");
+        return;
+    }
+
+    let report = { type, location, severity, date: new Date().toLocaleString() };
+    savedReports.unshift(report);
+    localStorage.setItem('myDisasters', JSON.stringify(savedReports));
+    displayReports();
+
+    document.getElementById('type').value = '';
+    document.getElementById('location').value = '';
+    document.getElementById('severity').value = '';
+}
+
+// Display all reports
+function displayReports() {
+    const container = document.getElementById('reports');
+    container.innerHTML = '';
+
+    const validSeverity = ['low','medium','high'];
+    savedReports.forEach(r => {
+        let severityClass = validSeverity.includes(r.severity) ? r.severity : 'medium';
+        const div = document.createElement('div');
+        div.className = `report-card ${severityClass}`;
+        div.innerHTML = `
+            <b>${r.type}</b><br>
+            Location: ${r.location}<br>
+            Severity: ${r.severity.charAt(0).toUpperCase() + r.severity.slice(1)}<br>
+            <small>${r.date}</small>
+        `;
+        container.appendChild(div);
+    });
+}
+
+// Fetch USGS Earthquake Data (past 7 days)
+function fetchUSGSEarthquakes() {
+    fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson')
+        .then(response => response.json())
+        .then(data => {
+            data.features.forEach(eq => {
+                const report = {
+                    type: "Earthquake",
+                    location: eq.properties.place,
+                    severity: eq.properties.mag >= 6 ? "high" : eq.properties.mag >= 4 ? "medium" : "low",
+                    date: new Date(eq.properties.time).toLocaleString()
+                };
+                savedReports.unshift(report);
+            });
+            displayReports();
+        })
+        .catch(err => console.error("USGS fetch error:", err));
+}
+
+// Automatically fetch USGS data on page load
+fetchUSGSEarthquakes();
+</script>
+
+
+
+<footer style="text-align:center; margin-top:20px; font-size:12px;">
+&copy; 2025 MirageHybrid_Official. Licensed under 
+<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a>
+</footer>
+
+
+
+</body>
+</html>
